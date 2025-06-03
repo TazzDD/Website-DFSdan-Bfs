@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisasi Graf Interaktif</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .toggle-btn {
+            background: linear-gradient(45deg, #10ac84, #00d2d3);
+        }
+        
+        .toggle-btn.active {
+            background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            margin: 0 10px;
+        }
+        
+        label {
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        canvas {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            cursor: crosshair;
+        }
+        
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .mode-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .algorithm-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 10px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        
+        .traversal-order {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        
+        .node-visited {
+            background: rgba(255, 0, 0, 0.8) !important;
+        }
+        
+        .node-current {
+            background: rgba(255, 255, 0, 0.8) !important;
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.8) !important;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Visualisasi Graf Interaktif</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <button id="addNodeBtn">➕ Tambah Node</button>
+                <button id="connectNodeBtn" class="toggle-btn">🔗 Hubungkan Node</button>
+            </div>
+            
+            <div class="control-group">
+                <button id="clearBtn">🗑️ Clear Graf</button>
+                <button id="directedBtn" class="toggle-btn">↔️ Undirected</button>
+            </div>
+            
+            <div class="control-group">
+                <label>Ukuran Node:</label>
+                <input type="range" id="nodeSizeSlider" min="10" max="30" value="20">
+                <span id="nodeSizeValue">20</span>
+            </div>
+            
+            <div class="control-group">
+                <button id="randomGraphBtn">🎲 Graf Random</button>
+                <button id="showDistanceBtn" class="toggle-btn">📏 Tampilkan Jarak</button>
+            </div>
+            
+            <div class="control-group">
+                <button id="dfsBtn">🔍 DFS Traversal</button>
+                <button id="bfsBtn">🌊 BFS Traversal</button>
+            </div>
+            
+            <div class="control-group">
+                <button id="stopBtn" style="display:none;">⏹️ Stop</button>
+                <button id="resetColorsBtn">🎨 Reset Colors</button>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="graphCanvas" width="800" height="500"></canvas>
+        </div>
+        
+        <div class="mode-indicator" id="modeIndicator">Mode: Tambah Node</div>
+        
+        <div class="info-panel">
+            <p><strong>Cara Penggunaan:</strong></p>
+            <p>• Klik "Tambah Node" lalu klik di canvas untuk menambah node</p>
+            <p>• Klik "Hubungkan Node" lalu klik dua node untuk menghubungkannya</p>
+            <p>• Toggle "Directed/Undirected" untuk mengubah jenis graf</p>
+            <p>• Gunakan slider untuk mengubah ukuran node</p>
+            <p>• Klik "Graf Random" untuk membuat graf acak</p>
+            <p>• Gunakan "DFS" atau "BFS" untuk melihat algoritma traversal dengan animasi</p>
+            <p>• "Reset Colors" untuk mengembalikan warna node ke normal</p>
+        </div>
+        
+        <div id="algorithmInfo" class="algorithm-info" style="display:none;">
+            <h3 id="algorithmTitle"></h3>
+            <p id="algorithmDescription"></p>
+            <div id="traversalOrder" class="traversal-order"></div>
+        </div>
+    </div>
+
+    <script>
+        class Vec3 {
+            constructor(x = 0, y = 0, z = 0) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+            
+            getX() { return this.x; }
+            getY() { return this.y; }
+            getZ() { return this.z; }
+        }
+
+        class GraphVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.nodes = [];
+                this.edges = [];
+                this.nodePositions = [];
+                this.adjacencyList = [];
+                this.distances = [];
+                this.isDirected = false;
+                this.nodeRadius = 20;
+                this.mode = 'addNode'; // 'addNode' or 'connectNode'
+                this.selectedNode = null;
+                this.showDistance = false;
+                this.nodeCounter = 0;
+                
+                // Algorithm visualization properties
+                this.isTraversing = false;
+                this.visitedNodes = new Set();
+                this.currentNode = null;
+                this.traversalOrder = [];
+                this.traversalSpeed = 1000; // milliseconds
+                this.nodeColors = {}; // Store custom colors for nodes
+                
+                this.colorTable = [
+                    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+                    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                    '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D2B4DE',
+                    '#AED6F1', '#A3E4D7', '#D5DBDB'
+                ];
+                
+                this.setupEventListeners();
+                this.draw();
+            }
+            
+            // DFS Implementation
+            async startDFS() {
+                if (this.nodes.length === 0) {
+                    alert('Tambahkan node terlebih dahulu!');
+                    return;
+                }
+                
+                if (this.isTraversing) return;
+                
+                this.showAlgorithmInfo('DFS (Depth-First Search)', 
+                    'DFS mengunjungi node secara mendalam terlebih dahulu sebelum backtrack. Menggunakan stack (rekursi) untuk menyimpan node yang akan dikunjungi.');
+                
+                this.resetTraversalState();
+                this.isTraversing = true;
+                document.getElementById('stopBtn').style.display = 'inline-block';
+                
+                const startNode = 0; // Mulai dari node 0
+                await this.dfsRecursive(startNode, new Set());
+                
+                this.completeTraversal();
+            }
+            
+            async dfsRecursive(nodeIdx, visited) {
+                if (!this.isTraversing) return;
+                
+                visited.add(nodeIdx);
+                this.visitedNodes.add(nodeIdx);
+                this.currentNode = nodeIdx;
+                this.traversalOrder.push(nodeIdx);
+                
+                this.updateTraversalDisplay();
+                this.draw();
+                
+                await this.sleep(this.traversalSpeed);
+                
+                if (!this.isTraversing) return;
+                
+                // Visit all adjacent nodes
+                for (let adjacentNode of this.adjacencyList[nodeIdx]) {
+                    if (!visited.has(adjacentNode) && this.isTraversing) {
+                        await this.dfsRecursive(adjacentNode, visited);
+                    }
+                }
+            }
+            
+            // BFS Implementation
+            async startBFS() {
+                if (this.nodes.length === 0) {
+                    alert('Tambahkan node terlebih dahulu!');
+                    return;
+                }
+                
+                if (this.isTraversing) return;
+                
+                this.showAlgorithmInfo('BFS (Breadth-First Search)', 
+                    'BFS mengunjungi semua node pada level yang sama terlebih dahulu sebelum ke level berikutnya. Menggunakan queue untuk menyimpan node yang akan dikunjungi.');
+                
+                this.resetTraversalState();
+                this.isTraversing = true;
+                document.getElementById('stopBtn').style.display = 'inline-block';
+                
+                const startNode = 0; // Mulai dari node 0
+                await this.bfsIterative(startNode);
+                
+                this.completeTraversal();
+            }
+            
+            async bfsIterative(startNode) {
+                const queue = [startNode];
+                const visited = new Set();
+                
+                while (queue.length > 0 && this.isTraversing) {
+                    const currentNode = queue.shift();
+                    
+                    if (visited.has(currentNode)) continue;
+                    
+                    visited.add(currentNode);
+                    this.visitedNodes.add(currentNode);
+                    this.currentNode = currentNode;
+                    this.traversalOrder.push(currentNode);
+                    
+                    this.updateTraversalDisplay();
+                    this.draw();
+                    
+                    await this.sleep(this.traversalSpeed);
+                    
+                    if (!this.isTraversing) return;
+                    
+                    // Add all unvisited adjacent nodes to queue
+                    for (let adjacentNode of this.adjacencyList[currentNode]) {
+                        if (!visited.has(adjacentNode) && !queue.includes(adjacentNode)) {
+                            queue.push(adjacentNode);
+                        }
+                    }
+                }
+            }
+            
+            stopTraversal() {
+                this.isTraversing = false;
+                this.currentNode = null;
+                document.getElementById('stopBtn').style.display = 'none';
+                this.draw();
+            }
+            
+            completeTraversal() {
+                this.isTraversing = false;
+                this.currentNode = null;
+                
+                // Mark all visited nodes as completed
+                for (let nodeIdx of this.visitedNodes) {
+                    this.nodeColors[nodeIdx] = 'completed';
+                }
+                
+                document.getElementById('stopBtn').style.display = 'none';
+                this.draw();
+            }
+            
+            resetTraversalState() {
+                this.visitedNodes.clear();
+                this.currentNode = null;
+                this.traversalOrder = [];
+                this.nodeColors = {};
+            }
+            
+            resetColors() {
+                this.stopTraversal();
+                this.resetTraversalState();
+                this.hideAlgorithmInfo();
+                this.draw();
+            }
+            
+            showAlgorithmInfo(title, description) {
+                document.getElementById('algorithmTitle').textContent = title;
+                document.getElementById('algorithmDescription').textContent = description;
+                document.getElementById('algorithmInfo').style.display = 'block';
+                document.getElementById('traversalOrder').textContent = 'Urutan Traversal: ';
+            }
+            
+            hideAlgorithmInfo() {
+                document.getElementById('algorithmInfo').style.display = 'none';
+            }
+            
+            updateTraversalDisplay() {
+                const orderText = 'Urutan Traversal: ' + this.traversalOrder.join(' → ');
+                document.getElementById('traversalOrder').textContent = orderText;
+            }
+            
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+            
+            setupEventListeners() {
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                
+                document.getElementById('addNodeBtn').addEventListener('click', () => this.setMode('addNode'));
+                document.getElementById('connectNodeBtn').addEventListener('click', () => this.setMode('connectNode'));
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearGraph());
+                document.getElementById('directedBtn').addEventListener('click', () => this.toggleDirected());
+                document.getElementById('randomGraphBtn').addEventListener('click', () => this.generateRandomGraph());
+                document.getElementById('showDistanceBtn').addEventListener('click', () => this.toggleShowDistance());
+                document.getElementById('dfsBtn').addEventListener('click', () => this.startDFS());
+                document.getElementById('bfsBtn').addEventListener('click', () => this.startBFS());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopTraversal());
+                document.getElementById('resetColorsBtn').addEventListener('click', () => this.resetColors());
+                
+                const nodeSizeSlider = document.getElementById('nodeSizeSlider');
+                nodeSizeSlider.addEventListener('input', (e) => {
+                    this.nodeRadius = parseInt(e.target.value);
+                    document.getElementById('nodeSizeValue').textContent = this.nodeRadius;
+                    this.draw();
+                });
+            }
+            
+            setMode(mode) {
+                this.mode = mode;
+                this.selectedNode = null;
+                
+                const addBtn = document.getElementById('addNodeBtn');
+                const connectBtn = document.getElementById('connectNodeBtn');
+                const modeIndicator = document.getElementById('modeIndicator');
+                
+                if (mode === 'addNode') {
+                    addBtn.classList.add('active');
+                    connectBtn.classList.remove('active');
+                    modeIndicator.textContent = 'Mode: Tambah Node';
+                    this.canvas.style.cursor = 'crosshair';
+                } else {
+                    addBtn.classList.remove('active');
+                    connectBtn.classList.add('active');
+                    modeIndicator.textContent = 'Mode: Hubungkan Node';
+                    this.canvas.style.cursor = 'pointer';
+                }
+            }
+            
+            toggleDirected() {
+                this.isDirected = !this.isDirected;
+                const btn = document.getElementById('directedBtn');
+                btn.textContent = this.isDirected ? '➡️ Directed' : '↔️ Undirected';
+                btn.classList.toggle('active');
+                this.draw();
+            }
+            
+            toggleShowDistance() {
+                this.showDistance = !this.showDistance;
+                const btn = document.getElementById('showDistanceBtn');
+                btn.classList.toggle('active');
+                this.draw();
+            }
+            
+            handleCanvasClick(e) {
+                if (this.isTraversing) return; // Disable clicks during traversal
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left - this.canvas.width / 2;
+                const y = -(e.clientY - rect.top - this.canvas.height / 2);
+                
+                if (this.mode === 'addNode') {
+                    this.addNode(x, y);
+                } else if (this.mode === 'connectNode') {
+                    const nodeIndex = this.getNodeAtPosition(x, y);
+                    if (nodeIndex !== -1) {
+                        this.handleNodeSelection(nodeIndex);
+                    }
+                }
+            }
+            
+            handleMouseMove(e) {
+                if (this.mode === 'connectNode') {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left - this.canvas.width / 2;
+                    const y = -(e.clientY - rect.top - this.canvas.height / 2);
+                    const nodeIndex = this.getNodeAtPosition(x, y);
+                    
+                    this.canvas.style.cursor = nodeIndex !== -1 ? 'pointer' : 'default';
+                }
+            }
+            
+            addNode(x, y) {
+                const position = new Vec3(x, y, 0);
+                this.nodePositions.push(position);
+                this.nodes.push(this.nodeCounter);
+                this.adjacencyList.push([]);
+                this.distances.push([]);
+                
+                // Inisialisasi distances untuk node baru
+                for (let i = 0; i < this.nodes.length; i++) {
+                    this.distances[i].push(0);
+                    if (i < this.nodes.length - 1) {
+                        this.distances[this.nodes.length - 1].push(0);
+                    }
+                }
+                
+                this.nodeCounter++;
+                this.draw();
+                
+                // Animasi pulse
+                setTimeout(() => {
+                    this.canvas.classList.add('pulse');
+                    setTimeout(() => this.canvas.classList.remove('pulse'), 300);
+                }, 50);
+            }
+            
+            getNodeAtPosition(x, y) {
+                for (let i = 0; i < this.nodePositions.length; i++) {
+                    const pos = this.nodePositions[i];
+                    const distance = Math.sqrt(
+                        Math.pow(x - pos.getX(), 2) + Math.pow(y - pos.getY(), 2)
+                    );
+                    if (distance <= this.nodeRadius) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+            
+            handleNodeSelection(nodeIndex) {
+                if (this.selectedNode === null) {
+                    this.selectedNode = nodeIndex;
+                    this.draw(); // Redraw to show selection
+                } else if (this.selectedNode !== nodeIndex) {
+                    this.addEdge(this.selectedNode, nodeIndex);
+                    this.selectedNode = null;
+                    this.draw();
+                } else {
+                    // Same node clicked, deselect
+                    this.selectedNode = null;
+                    this.draw();
+                }
+            }
+            
+            addEdge(sourceIdx, targetIdx) {
+                // Check if edge already exists
+                if (!this.adjacencyList[sourceIdx].includes(targetIdx)) {
+                    this.adjacencyList[sourceIdx].push(targetIdx);
+                    
+                    if (!this.isDirected && !this.adjacencyList[targetIdx].includes(sourceIdx)) {
+                        this.adjacencyList[targetIdx].push(sourceIdx);
+                    }
+                    
+                    // Calculate distance
+                    const sourcePos = this.nodePositions[sourceIdx];
+                    const targetPos = this.nodePositions[targetIdx];
+                    const distance = Math.sqrt(
+                        Math.pow(sourcePos.getX() - targetPos.getX(), 2) +
+                        Math.pow(sourcePos.getY() - targetPos.getY(), 2)
+                    );
+                    
+                    this.distances[sourceIdx][targetIdx] = Math.round(distance);
+                    if (!this.isDirected) {
+                        this.distances[targetIdx][sourceIdx] = Math.round(distance);
+                    }
+                }
+            }
+            
+            clearGraph() {
+                this.stopTraversal();
+                this.nodes = [];
+                this.edges = [];
+                this.nodePositions = [];
+                this.adjacencyList = [];
+                this.distances = [];
+                this.nodeCounter = 0;
+                this.selectedNode = null;
+                this.nodeColors = {};
+                this.hideAlgorithmInfo();
+                this.draw();
+            }
+            
+            generateRandomGraph() {
+                this.clearGraph();
+                
+                const numNodes = 5 + Math.floor(Math.random() * 6); // 5-10 nodes
+                const centerX = 0;
+                const centerY = 0;
+                const radius = 150;
+                
+                // Generate nodes in circular pattern
+                for (let i = 0; i < numNodes; i++) {
+                    const angle = (i * 2 * Math.PI) / numNodes;
+                    const x = centerX + radius * Math.cos(angle) + (Math.random() - 0.5) * 50;
+                    const y = centerY + radius * Math.sin(angle) + (Math.random() - 0.5) * 50;
+                    this.addNode(x, y);
+                }
+                
+                // Generate random edges
+                const numEdges = Math.floor(numNodes * 1.2);
+                for (let i = 0; i < numEdges; i++) {
+                    const source = Math.floor(Math.random() * numNodes);
+                    const target = Math.floor(Math.random() * numNodes);
+                    if (source !== target) {
+                        this.addEdge(source, target);
+                    }
+                }
+                
+                this.draw();
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Save context and translate to center
+                this.ctx.save();
+                this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.scale(1, -1); // Flip Y axis to match OpenGL coordinates
+                
+                // Draw edges
+                this.drawEdges();
+                
+                // Draw distances if enabled
+                if (this.showDistance) {
+                    this.drawDistances();
+                }
+                
+                // Draw nodes
+                this.drawNodes();
+                
+                this.ctx.restore();
+            }
+            
+            drawNodes() {
+                for (let i = 0; i < this.nodePositions.length; i++) {
+                    const pos = this.nodePositions[i];
+                    const isSelected = this.selectedNode === i;
+                    const isCurrent = this.currentNode === i;
+                    const isVisited = this.visitedNodes.has(i);
+                    const isCompleted = this.nodeColors[i] === 'completed';
+                    
+                    // Determine node colors based on state
+                    let strokeColor = '#00FF00'; // Default green
+                    let fillColor = 'rgba(0, 255, 0, 0.1)';
+                    let lineWidth = 2;
+                    
+                    if (isSelected) {
+                        strokeColor = '#FFD700';
+                        fillColor = 'rgba(255, 215, 0, 0.3)';
+                        lineWidth = 4;
+                    } else if (isCurrent) {
+                        strokeColor = '#FFFF00';
+                        fillColor = 'rgba(255, 255, 0, 0.8)';
+                        lineWidth = 4;
+                    } else if (isCompleted) {
+                        strokeColor = '#00FF00';
+                        fillColor = 'rgba(0, 255, 0, 0.8)';
+                        lineWidth = 3;
+                    } else if (isVisited) {
+                        strokeColor = '#FF0000';
+                        fillColor = 'rgba(255, 0, 0, 0.8)';
+                        lineWidth = 3;
+                    }
+                    
+                    // Draw node circle
+                    this.ctx.beginPath();
+                    this.ctx.arc(pos.getX(), pos.getY(), this.nodeRadius, 0, 2 * Math.PI);
+                    this.ctx.lineWidth = lineWidth;
+                    this.ctx.strokeStyle = strokeColor;
+                    this.ctx.stroke();
+                    
+                    // Fill node
+                    this.ctx.fillStyle = fillColor;
+                    this.ctx.fill();
+                    
+                    // Add glow effect for current node
+                    if (isCurrent) {
+                        this.ctx.shadowColor = '#FFFF00';
+                        this.ctx.shadowBlur = 20;
+                        this.ctx.beginPath();
+                        this.ctx.arc(pos.getX(), pos.getY(), this.nodeRadius, 0, 2 * Math.PI);
+                        this.ctx.stroke();
+                        this.ctx.shadowBlur = 0;
+                    }
+                    
+                    // Draw node label
+                    this.ctx.save();
+                    this.ctx.scale(1, -1); // Flip text back
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.font = 'bold 14px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.strokeStyle = '#000000';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.strokeText(i.toString(), pos.getX(), -pos.getY());
+                    this.ctx.fillText(i.toString(), pos.getX(), -pos.getY());
+                    this.ctx.restore();
+                }
+            }
+            
+            drawEdges() {
+                const drawnEdges = new Set();
+                
+                for (let i = 0; i < this.adjacencyList.length; i++) {
+                    const sourcePos = this.nodePositions[i];
+                    
+                    for (let j = 0; j < this.adjacencyList[i].length; j++) {
+                        const targetIdx = this.adjacencyList[i][j];
+                        const targetPos = this.nodePositions[targetIdx];
+                        
+                        // Skip if edge already drawn (for undirected graphs)
+                        const edgeKey = this.isDirected ? `${i}-${targetIdx}` : 
+                                       `${Math.min(i, targetIdx)}-${Math.max(i, targetIdx)}`;
+                        
+                        if (drawnEdges.has(edgeKey)) continue;
+                        drawnEdges.add(edgeKey);
+                        
+                        if (i === targetIdx) {
+                            // Self loop
+                            this.drawSelfLoop(sourcePos);
+                        } else {
+                            // Regular edge
+                            this.drawEdge(sourcePos, targetPos, i, targetIdx);
+                        }
+                    }
+                }
+            }
+            
+            drawEdge(sourcePos, targetPos, sourceIdx, targetIdx) {
+                const dx = targetPos.getX() - sourcePos.getX();
+                const dy = targetPos.getY() - sourcePos.getY();
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const unitX = dx / length;
+                const unitY = dy / length;
+                
+                // Calculate edge endpoints (offset by node radius)
+                const startX = sourcePos.getX() + unitX * this.nodeRadius;
+                const startY = sourcePos.getY() + unitY * this.nodeRadius;
+                const endX = targetPos.getX() - unitX * this.nodeRadius;
+                const endY = targetPos.getY() - unitY * this.nodeRadius;
+                
+                // Draw edge line
+                this.ctx.beginPath();
+                this.ctx.moveTo(startX, startY);
+                this.ctx.lineTo(endX, endY);
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                // Draw arrow for directed graph
+                if (this.isDirected) {
+                    this.drawArrow(endX, endY, Math.atan2(dy, dx));
+                }
+            }
+            
+            drawSelfLoop(pos) {
+                const radius = this.nodeRadius * 1.5;
+                this.ctx.beginPath();
+                this.ctx.arc(pos.getX(), pos.getY() + radius, radius * 0.7, 0, Math.PI * 1.5);
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                if (this.isDirected) {
+                    this.drawArrow(pos.getX() - radius * 0.5, pos.getY() + radius * 0.5, Math.PI * 0.75);
+                }
+            }
+            
+            drawArrow(x, y, angle) {
+                const arrowLength = 10;
+                const arrowAngle = Math.PI / 6;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y);
+                this.ctx.lineTo(
+                    x - arrowLength * Math.cos(angle - arrowAngle),
+                    y - arrowLength * Math.sin(angle - arrowAngle)
+                );
+                this.ctx.moveTo(x, y);
+                this.ctx.lineTo(
+                    x - arrowLength * Math.cos(angle + arrowAngle),
+                    y - arrowLength * Math.sin(angle + arrowAngle)
+                );
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            }
+            
+            drawDistances() {
+                const drawnDistances = new Set();
+                
+                for (let i = 0; i < this.adjacencyList.length; i++) {
+                    const sourcePos = this.nodePositions[i];
+                    
+                    for (let j = 0; j < this.adjacencyList[i].length; j++) {
+                        const targetIdx = this.adjacencyList[i][j];
+                        const targetPos = this.nodePositions[targetIdx];
+                        
+                        if (i === targetIdx) continue; // Skip self loops
+                        
+                        const distanceKey = this.isDirected ? `${i}-${targetIdx}` : 
+                                          `${Math.min(i, targetIdx)}-${Math.max(i, targetIdx)}`;
+                        
+                        if (drawnDistances.has(distanceKey)) continue;
+                        drawnDistances.add(distanceKey);
+                        
+                        // Calculate midpoint with slight offset
+                        const midX = (sourcePos.getX() + targetPos.getX()) / 2;
+                        const midY = (sourcePos.getY() + targetPos.getY()) / 2;
+                        
+                        const distance = this.distances[i][targetIdx];
+                        if (distance > 0) {
+                            this.ctx.save();
+                            this.ctx.scale(1, -1);
+                            this.ctx.fillStyle = '#FFFF00';
+                            this.ctx.font = 'bold 12px Arial';
+                            this.ctx.textAlign = 'center';
+                            this.ctx.textBaseline = 'middle';
+                            this.ctx.fillText(distance.toString(), midX, -midY);
+                            this.ctx.restore();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Initialize the graph visualizer when page loads
+        window.addEventListener('load', () => {
+            const graphViz = new GraphVisualizer('graphCanvas');
+        });
+    </script>
+</body>
+</html>
